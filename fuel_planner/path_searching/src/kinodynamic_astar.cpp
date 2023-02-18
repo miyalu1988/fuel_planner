@@ -72,7 +72,7 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
     }
     if (reach_horizon) {
       if (is_shot_succ_) {
-        std::cout << "reach end" << std::endl;
+        std::cout << "reach end: reach_horizon" << std::endl;
         return REACH_END;
       } else {
         std::cout << "reach horizon" << std::endl;
@@ -82,7 +82,7 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
 
     if (near_end) {
       if (is_shot_succ_) {
-        std::cout << "reach end" << std::endl;
+        std::cout << "reach end: near_end && is_shot_succ_" << std::endl;
         return REACH_END;
       } else if (cur_node->parent != NULL) {
         std::cout << "near end" << std::endl;
@@ -651,6 +651,7 @@ Eigen::Vector3i KinodynamicAstar::posToIndex(Eigen::Vector3d pt) {
 
 int KinodynamicAstar::timeToIndex(double time) {
   int idx = floor((time - time_origin_) * inv_time_resolution_);
+  return idx;
 }
 
 void KinodynamicAstar::stateTransit(Eigen::Matrix<double, 6, 1>& state0,

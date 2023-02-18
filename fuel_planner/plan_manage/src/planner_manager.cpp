@@ -153,6 +153,7 @@ bool FastPlannerManager::kinodynamicReplan(const Eigen::Vector3d& start_pt,
       return false;
     }
   }
+  
   plan_data_.kino_path_ = kino_path_finder_->getKinoTraj(0.01);
 
   double t_search = (ros::Time::now() - t1).toSec();
@@ -163,10 +164,10 @@ bool FastPlannerManager::kinodynamicReplan(const Eigen::Vector3d& start_pt,
   vector<Eigen::Vector3d> point_set, start_end_derivatives;
   kino_path_finder_->getSamples(ts, point_set, start_end_derivatives);
 
-  // std::cout << "point set:" << std::endl;
-  // for (auto pt : point_set) std::cout << pt.transpose() << std::endl;
-  // std::cout << "derivative:" << std::endl;
-  // for (auto dr : start_end_derivatives) std::cout << dr.transpose() << std::endl;
+  std::cout << "point set:" << std::endl;
+  for (auto pt : point_set) std::cout << pt.transpose() << std::endl;
+  std::cout << "derivative:" << std::endl;
+  for (auto dr : start_end_derivatives) std::cout << dr.transpose() << std::endl;
 
   Eigen::MatrixXd ctrl_pts;
   NonUniformBspline::parameterizeToBspline(
@@ -174,14 +175,17 @@ bool FastPlannerManager::kinodynamicReplan(const Eigen::Vector3d& start_pt,
   NonUniformBspline init(ctrl_pts, pp_.bspline_degree_, ts);
 
   // B-spline-based optimization
+  ROS_INFO("B-spline-based optimization start...");
   int cost_function = BsplineOptimizer::NORMAL_PHASE;
   if (pp_.min_time_) cost_function |= BsplineOptimizer::MINTIME;
+
   vector<Eigen::Vector3d> start, end;
   init.getBoundaryStates(2, 0, start, end);
   bspline_optimizers_[0]->setBoundaryStates(start, end);
   if (time_lb > 0) bspline_optimizers_[0]->setTimeLowerBound(time_lb);
 
   bspline_optimizers_[0]->optimize(ctrl_pts, ts, cost_function, 1, 1);
+
   local_data_.position_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, ts);
 
   vector<Eigen::Vector3d> start2, end2;
@@ -287,14 +291,18 @@ void FastPlannerManager::planExploreTraj(const vector<Eigen::Vector3d>& tour,
   seg_num = max(8, seg_num);
   double dt = duration / double(seg_num);
 
-  std::cout << "duration: " << duration << ", seg_num: " << seg_num << ", dt: " << dt << std::endl;
+  std::cout << "[planExploreTraj] duration: " << duration << ", seg_num: " << seg_num << ", dt: " << dt << std::endl;
 
   for (double ts = 0.0; ts <= duration + 1e-4; ts += dt)
+  {
     points.push_back(init_traj.evaluate(ts, 0));
+  }
   boundary_deri.push_back(init_traj.evaluate(0.0, 1));
   boundary_deri.push_back(init_traj.evaluate(duration, 1));
   boundary_deri.push_back(init_traj.evaluate(0.0, 2));
   boundary_deri.push_back(init_traj.evaluate(duration, 2));
+
+  std::cout << "[planExploreTraj] boundary_deri.size: " << boundary_deri.size() << std::endl;
 
   Eigen::MatrixXd ctrl_pts;
   NonUniformBspline::parameterizeToBspline(
@@ -313,6 +321,8 @@ void FastPlannerManager::planExploreTraj(const vector<Eigen::Vector3d>& tour,
   local_data_.position_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
 
   updateTrajInfo();
+
+  std::cout << "[planExploreTraj] end ..." << std::endl;
 }
 
 // !SECTION

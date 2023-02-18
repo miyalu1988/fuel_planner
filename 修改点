@@ -1,0 +1,6 @@
+一、安装nlopt
+sudo apt-get install ros-noetic-nlopt
+二、官方源码修改for Ubuntu20.04
+1、所有CMakeLists.txt中涉及c++11，均改成c++14
+2、函数int timeToIndex(double time)的两处实现中，最后添加return idx
+3、文件夹fuel_planner下的功能包bspline_opt的CMakeLists.txt文件

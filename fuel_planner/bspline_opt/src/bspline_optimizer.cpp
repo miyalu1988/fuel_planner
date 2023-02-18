@@ -165,12 +165,15 @@ void BsplineOptimizer::optimize(Eigen::MatrixXd& points, double& dt, const int& 
 void BsplineOptimizer::optimize() {
   // Optimize all control points and maybe knot span dt
   // Use NLopt solver
+  std::cout << "BsplineOptimizer::optimize() " << std::endl;
   nlopt::opt opt(nlopt::algorithm(isQuadratic() ? algorithm1_ : algorithm2_), variable_num_);
+  std::cout << "isQuadratic: " << isQuadratic() << ", variable_num_: " << variable_num_ << std::endl;
   opt.set_min_objective(BsplineOptimizer::costFunction, this);
+  
+  std::cout << "max_num_id_: " << max_num_id_ << std::endl;
   opt.set_maxeval(max_iteration_num_[max_num_id_]);
   opt.set_maxtime(max_iteration_time_[max_time_id_]);
   opt.set_xtol_rel(1e-5);
-
   // Set axis aligned bounding box for optimization
   Eigen::Vector3d bmin, bmax;
   edt_environment_->sdf_map_->getBox(bmin, bmax);
@@ -178,6 +181,7 @@ void BsplineOptimizer::optimize() {
     bmin[k] += 0.1;
     bmax[k] -= 0.1;
   }
+  std::cout << "bmin,bmax" << std::endl;
   // Deprecated: does not optimize start and end control points
   // for (int i = order_; i < pt_num; ++i)
   // {
@@ -219,6 +223,7 @@ void BsplineOptimizer::optimize() {
     opt.set_lower_bounds(lb);
     opt.set_upper_bounds(ub);
   }
+  std::cout << "BsplineOptimizer::optimize() -- 1" << std::endl;
 
   auto t1 = ros::Time::now();
   try {
@@ -227,15 +232,18 @@ void BsplineOptimizer::optimize() {
   } catch (std::exception& e) {
     cout << e.what() << endl;
   }
+  std::cout << "BsplineOptimizer::optimize() -- 2" << std::endl;
+
   for (int i = 0; i < point_num_; ++i)
     for (int j = 0; j < dim_; ++j)
       control_points_(i, j) = best_variable_[dim_ * i + j];
   if (optimize_time_) knot_span_ = best_variable_[variable_num_ - 1];
-
+  std::cout << "BsplineOptimizer::optimize() -- 3" << std::endl;
   if (cost_function_ & MINTIME) {
     std::cout << "Iter num: " << iter_num_ << ", time: " << (ros::Time::now() - t1).toSec()
               << ", point num: " << point_num_ << ", comb time: " << comb_time << std::endl;
   }
+  std::cout << "BsplineOptimizer::optimize() -- 4" << std::endl;
 
   // Deprecated
   // for (int i = order_; i < control_points_.rows(); ++i)
@@ -692,10 +700,12 @@ void BsplineOptimizer::combineCost(const std::vector<double>& x, std::vector<dou
 
 double BsplineOptimizer::costFunction(const std::vector<double>& x, std::vector<double>& grad,
                                       void* func_data) {
+  std::cout << "BsplineOptimizer::costFunction() -- 0: " << std::endl;
   BsplineOptimizer* opt = reinterpret_cast<BsplineOptimizer*>(func_data);
   double cost;
   opt->combineCost(x, grad, cost);
   opt->iter_num_++;
+  std::cout << "BsplineOptimizer::costFunction() -- 1: " << std::endl;
 
   /* save the min cost result */
   if (cost < opt->min_cost_) {
@@ -703,6 +713,7 @@ double BsplineOptimizer::costFunction(const std::vector<double>& x, std::vector<
     opt->best_variable_ = x;
     // std::cout << cost << ", ";
   }
+  std::cout << "final cost: " << cost << std::endl;
   return cost;
 
   // /* evaluation */
